@@ -1,5 +1,5 @@
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, Updater, CallbackQueryHandler, CommandHandler, MessageHandler, filters, CallbackContext, ContextTypes
+from telegram.ext import Application, Updater, CallbackQueryHandler, CommandHandler, MessageHandler, ConversationHandler, filters, CallbackContext, ContextTypes
 #from telethon.sync import TelegramClient
 #from telethon import TelegramClient
 import asyncio
@@ -8,17 +8,40 @@ from telethon import TelegramClient
 import datetime
 import os
 import requests
+from bug import allbug
 
+from cryptography.fernet import Fernet
+
+pathkey = ""
+# Baca kunci enkripsi
+with open(pathkey, "rb") as key_file:
+    key = key_file.read()
+
+fernet = Fernet(key)
+
+# Baca token terenkripsi dari file
+with open("encrypted_token.txt", "rb") as enc_file:
+    encrypted_token = enc_file.read()
+
+# Dekripsi token
+decrypted_token = fernet.decrypt(encrypted_token).decode()
+
+print(f"Decrypted Token: {decrypted_token}")
 
 # Token bot Telegram Anda notif_dari_bot
-TOKEN = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+TOKEN = decrypted_token
 
 chat_id_pengguna = None
 pesan = None
+# Status conversation
+BUG = 1
+HPSBUG = 1
+file_pathbug = "/home/gapesta/coding/python/bot tgm/dari ia/bug.py"
 
 
 # Dictionary untuk menyimpan pilihan pengguna
 user_choices = {}
+#user_data = []
 
 PHOTO_DIR = "/home/gapesta/Downloads/dari_bot/downloaded_photos"
 OGG_DIR = "/home/gapesta/Downloads/dari_bot/downloaded_voice"
@@ -44,7 +67,7 @@ if not os.path.exists(DOCU_DIR  ):
 # Handler untuk perintah /start
 async def start(update: Update, context: CallbackContext):
     # Membuat keyboard menu
-    keyboard = [["CEK ID USERNAME"], ["KIRIMI KAMI PESAN"], ["GENERATE BUG"]]
+    keyboard = [["CEK ID USERNAME"], ["KIRIMI KAMI PESAN"], ["GENERATE BUG"], ["MENU BUG"]]
     reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True)
 
     # Mengirim pesan dengan menu
@@ -56,9 +79,9 @@ async def start(update: Update, context: CallbackContext):
 # Handler untuk perintah /kirim
 async def kirim(update: Update, context: CallbackContext):
     global chat_id_pengguna, pesan
-    token_bot_ini = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+    global TOKEN
     # kirim pesan
-    url_root = f'https://api.telegram.org/bot{token_bot_ini}/sendMessage'
+    url_root = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
     
     
 
@@ -131,31 +154,33 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
 # Handler untuk menu "CEK ID USERNAME"
 async def cek_chat_id_username(update: Update, context: CallbackContext):
-    user_name = update.message.from_user.first_name
+    user_name = update.message.from_user.first_name if update.message.from_user.first_name else "-"
+    last_name = update.message.from_user.last_name if update.message.from_user.last_name else "-"
+    full_name = update.message.from_user.full_name if update.message.from_user.full_name else "-"
     chat_id = update.message.chat_id
     username = update.message.from_user.username
     #wktu = update.message.date
     current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # Mengirim balasan dengan chat ID dan username
-    await update.message.reply_text(
-        f"Hello {user_name}\nChat ID Anda Adalah: {chat_id}\nUsername Anda adalah: @{username}\nwaktu: {current_time}"
+    update.message.reply_text(
+        f"Hello {user_name}\nchat id: {chat_id}\nfirst name: {user_name}\nlast name: {last_name}\nfull name: {full_name}\nUsername: @{username}\nwaktu: {current_time}"
     )
 
 # Handler untuk menu "KIRIMI KAMI PESAN"
 async def kirim_pesan_kedeveloper(update: Update, context: CallbackContext):
     
     chat_id = 5867172791
-    token_bot = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+    TOKEN = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
     user_name_penggirim = update.message.from_user.first_name
     chat_id_penggirim = update.message.chat_id
     username_penggirim = update.message.from_user.username
     text = update.message.text.lower()
     current_time_penggirim = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    tampikan_id = f"========================\n👤 Nama      : {user_name_penggirim}\n🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: {current_time_penggirim}\n========================\n"
+    tampikan_id = f"========================\n👤 Nama      : {user_name_penggirim}\n🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: 📅 {current_time_penggirim}\n========================\n"
     text = tampikan_id + text
     
-    url = f'https://api.telegram.org/bot{token_bot}/sendMessage'
+    url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
     payload = {
         'chat_id': chat_id,
         'text': text,
@@ -254,6 +279,174 @@ async def id_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
 
 #    except Exception as e:
 #        await update.message.reply_text(f"Tidak dapat menemukan pengguna dengan username {username}. Pastikan username valid.")
+# Handler menu bug"
+async def menu_bug(update: Update, context: CallbackContext):
+        # Membuat tombol inline
+    keyboard = [
+        [InlineKeyboardButton("ADD BUG", callback_data='add_bug')],
+        [InlineKeyboardButton("LIST BUG", callback_data='list_bug')],
+        [InlineKeyboardButton("HAPUS BUG", callback_data='hapus_bug')]
+    ]
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
+    await update.message.reply_text("Silakan pilih menu:", reply_markup=reply_markup)
+
+# Fungsi saat user klik "Menu 1"
+async def add_bug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    #meminta input bug
+    await query.message.reply_text("Silakan masukan host bug atau ip bug\njika ingin membatalkan klik /cancel_add_bug")
+    #global BUG
+    return BUG
+
+# Fungsi menangkap input nomor HP
+async def handle_add_bug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    BUG = update.message.text
+    user_id = update.message.from_user.id
+
+    # Simpan ke file
+    #file_path = "/root/bug.py"
+    global file_pathbug
+    # Baca isi file
+    with open(file_pathbug, "r") as file:
+        content = file.read()
+
+    # Ganti teks
+    content = content.replace("]", f', "{BUG}"]')
+
+    # Tulis ulang ke file
+    with open(file_pathbug, "w") as file:
+        file.write(content)
+
+    #print("Teks berhasil diganti!")
+
+    sks = await update.message.reply_text(f"BUG {BUG} berhasil disimpan di{file_pathbug}!\nKetik /start untuk kembali ke menu.")
+    
+    # Tunggu 5 detik
+    await asyncio.sleep(5)
+
+        # Hapus pesan bot
+    await sks.delete()
+
+    return ConversationHandler.END  # Mengakhiri conversation
+    
+
+
+# Fungsi membatalkan input
+async def cancel_add_bug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Input dibatalkan. Ketik /start untuk kembali ke menu.")
+    return ConversationHandler.END
+
+
+# Fungsi membatalkan input
+async def cancel_hps_bug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Input dibatalkan. Ketik /start untuk kembali ke menu.")
+    return ConversationHandler.END
+    
+ #Fungsi untuk menangani tombol yang diklik
+async def button_callback(update: Update, context: CallbackContext):
+    """Menangani klik tombol inline keyboard."""
+    query = update.callback_query
+    await query.answer()# Menandakan bahwa callback telah diterima
+    
+    # Mengetahui tombol mana yang diklik
+    if query.data == 'list_bug':
+        await lst_bug(update, context)
+    #elif query.data == 'hapus_bug':
+    #    await query.message.reply_text("Silakan Masukkan ip/host yang mau dihapus")
+    #    global user_data
+    #    context.user_data["awaiting_name"] = True
+    #    await hps_bug(update, context)
+
+
+async def hps_bug(update: Update, context: CallbackContext) -> None:
+    """Meminta user untuk memasukkan ID member yang akan dihapus."""
+    query = update.callback_query
+    await query.answer()
+    #await update.callback_query.message.reply_text("Silakan Masukkan ip/host yang mau dihapus")
+    await query.message.reply_text("Silakan Masukkan ip/host yang mau dihapus.")
+    return HPSBUG
+async def handle_hps_bug(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    HPSBUG = update.message.text
+
+    #print(HPSBUG)
+    #context.user_data["awaiting_name"] = False
+    #print("===========")
+    global file_pathbug
+    hapus = [update.message.text]
+
+    i = 0
+    while i < len(allbug):
+        j = 0
+        while j < len(hapus):
+            if allbug[i] == hapus[j]:
+                del allbug[i]  # Menghapus elemen langsung dari list data
+                i -= 1  # Mundur satu langkah karena list berubah
+                try:
+                    with open(file_pathbug, 'r', encoding='utf-8') as file:
+                        content = file.read()
+                    
+                    # Hapus kata yang sesuai
+                    updated_content = content.replace(f', "{HPSBUG}"', '')
+                    print(updated_content)
+                    with open(file_pathbug, 'w', encoding='utf-8') as file:
+                        file.write(updated_content)
+                    
+                    print(f'Kata "{HPSBUG}" berhasil dihapus dari {file_pathbug}')
+                except FileNotFoundError:
+                    print(f'File "{file_pathbug}" tidak ditemukan.')
+                except Exception as e:
+                    print(f'Terjadi kesalahan: {e}')
+                
+                break
+            j += 1
+        i += 1
+
+    #print(allbug)
+
+    await update.message.reply_text(f"bug {HPSBUG} berhasil dihapus!\nKetik /start untuk kembali ke menu.")
+    
+    # Tunggu 5 detik
+    #await asyncio.sleep(3)
+
+        # Hapus pesan bot
+    #await sks.delete()
+
+    return ConversationHandler.END  # Mengakhiri conversation
+    
+
+# Fungsi saat user klik "listbug"
+async def lst_bug(update: Update, context: CallbackContext):
+#    global file_pathbug
+#    try:
+#        with open(file_pathbug, "r", encoding="utf-8") as file:
+#            content = file.read()
+#        
+#        if len(content) > 4000:  # Telegram memiliki batasan 4096 karakter per pesan
+#            await update.callback_query.message.reply_text("File terlalu besar, akan dikirim sebagai dokumen.")
+#            await update.callback_query.message.reply_document(document=open(file_pathbug, "rb"))
+#        else:
+            #await update.message.reply_text(f"📄 Isi file:\n\n{content}")
+#            await update.callback_query.message.reply_text(f"📄 Isi file:\n\n{content}")
+
+#    except Exception as e:
+#        if update.message: #untuk commend
+#            await update.message.reply_text(f"Terjadi kesalahan: {e}")
+#        elif update.callback_query:  #untuk callback
+#            await update.callback_query.message.reply_text(f"Terjadi kesalahan: {e}")
+#        else:
+#            await update.effective_message.reply_text(f"Terjadi kesalahan: {e}") #callback dan commend
+
+    """Fungsi untuk menampilkan daftar member."""
+    chat_id = update.effective_chat.id
+    #print(f"DEBUG: daftar_members -> {allbug} (type: {type(allbug)})")
+
+    daftar = "\n".join([f"{i+1}. {member}" for i, member in enumerate(allbug)])
+    jumlah_bug = len(allbug)
+    await context.bot.send_message(chat_id=chat_id, text=f"Daftar Member:\n{daftar}")
+    await update.callback_query.message.reply_text(f"jumlah bug {jumlah_bug}")
 
 
 async def ubah_file_txt(update: Update, context: CallbackContext):
@@ -274,7 +467,7 @@ async def ubah_file_txt(update: Update, context: CallbackContext):
     # Create a list to store modified contents for each duplication
         modified_contents = []
 
-        allbug= ["104.17.70.206", "104.17.72.206", "104.17.71.206", "104.17.73.206", "104.17.74.206", "172.64.153.235", "172.64.155.235", "104.16.112.133", "104.16.143.237", "162.159.128.79", "104.18.43.134", "104.16.242.118", "104.18.43.123", "104.18.40.22", "172.64.151.90", "104.18.21.37", "172.64.148.245", "162.159.135.91", "172.64.155.61", "104.18.32.195", "188.114.96.3", "162.159.153.4", "172.64.155.179", "172.67.37.55", "172.64.147.209", "162.159.135.91", "104.18.40.14", "104.18.33.162", "104.18.15.182", "172.66.47.13", "104.18.24.109", "104.18.29.127", "104.18.19.109", "104.18.28.127", "104.18.18.109", "162.159.130.11", "104.16.95.80", "104.18.41.18", "104.16.20.254", "104.18.36.212", "172.64.146.238", "172.64.151.106", "172.67.5.14", "04.22.5.240", "162.159.140.159"]
+        #allbug= ["104.17.70.206", "104.17.72.206", "104.17.71.206", "104.17.73.206", "104.17.74.206", "172.64.153.235", "172.64.155.235", "104.16.112.133", "104.16.143.237", "162.159.128.79", "104.18.43.134", "104.16.242.118", "104.18.43.123", "104.18.40.22", "172.64.151.90", "104.18.21.37", "172.64.148.245", "162.159.135.91", "172.64.155.61", "104.18.32.195", "188.114.96.3", "162.159.153.4", "172.64.155.179", "172.67.37.55", "172.64.147.209", "162.159.135.91", "104.18.40.14", "104.18.33.162", "104.18.15.182", "172.66.47.13", "104.18.24.109", "104.18.29.127", "104.18.19.109", "104.18.28.127", "104.18.18.109", "162.159.130.11", "104.16.95.80", "104.18.41.18", "104.16.20.254", "104.18.36.212", "172.64.146.238", "172.64.151.106", "172.67.5.14", "04.22.5.240", "162.159.140.159"]
 
         for i in allbug :  # Loop dari 1 sampai 10
             modified_content = content.replace('server: ""', f"server: {i}")  # Ganti "server" dengan "192.168.88.X"
@@ -305,6 +498,7 @@ async def ubah_file_txt(update: Update, context: CallbackContext):
         await update.message.reply_text('Silakan kirim file .txt untuk diubah. text yang diubah server: ""')
 
 # Handler untuk memproses pesan teks
+
 async def handle_message(update: Update, context: CallbackContext):
     text = update.message.text
 
@@ -315,18 +509,11 @@ async def handle_message(update: Update, context: CallbackContext):
         await update.message.reply_text("Silakan Masukan pesan yang ingan anda sampaikan ke Developer")
     elif text == "GENERATE BUG":
         await update.message.reply_text('Kirim file .txt untuk diubah server: "" jadi bug')
+    elif text == "MENU BUG":
+        await menu_bug(update, context)
     else:
         await kirim_pesan_kedeveloper(update, context)
 
-#async def handle_Photo(update: Update, context: CallbackContext):
-#    """Fungsi untuk menangkap dan menyimpan foto"""
-#    photo = update.message.photo[-1]  # Ambil resolusi tertinggi
-#    file_id = photo.file_id
-#    file = await context.bot.get_file(file_id)
-#    file_path = os.path.join(PHOTO_DIR, f"{update.message.from_user.id}_{update.message.message_id}.jpg")
-#    await file.download_to_drive(file_path)
-#    await update.message.reply_text(f"📸 Foto telah disimpan di {file_path}")
-    
 # Fungsi utama untuk menjalankan bot
 async def handle_media(update: Update, context: CallbackContext):
     """Tangkap semua media (foto, video, dokumen, dll.) dan simpan ke direktori downloads."""
@@ -342,15 +529,15 @@ async def handle_media(update: Update, context: CallbackContext):
         await file_obj.download_to_drive(file_path)
         await message.reply_text(f"File berhasil disimpan: {file_path}")
         chat_id = 5867172791
-        token_bot = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
-        user_name_penggirim = message.from_user.first_name
-        last_name_penggirim = message.from_user.last_name
+        global TOKEN 
+        user_name_penggirim = message.from_user.first_name if message.from_user.first_name else "-"
+        last_name_penggirim = message.from_user.last_name if message.from_user.last_name else "-"
         chat_id_penggirim = message.chat_id
         username_penggirim = message.from_user.username
         current_time_penggirim = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        tampikan_id = f"========================\n {user_name_penggirim} : menggirim 📷 Gambar\n👤 first name :{user_name_penggirim}\n👤 last name :{last_name_penggirim}\n🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: {current_time_penggirim}\n========================\n"
+        tampikan_id = f"========================\n {user_name_penggirim} : menggirim 📷 Gambar\n👤 first name :{user_name_penggirim}\n👤 last name :{last_name_penggirim}\n🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: 📅 {current_time_penggirim}\n========================\n"
         caption = message.caption if message.caption else f"📷 Gambar diterima dari @{username_penggirim }"
-        url = f'https://api.telegram.org/bot{token_bot}/sendMessage'
+        url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
         payload = {
             'chat_id': chat_id,
             'text': tampikan_id,
@@ -371,7 +558,7 @@ async def handle_media(update: Update, context: CallbackContext):
         await message.reply_text(f"File berhasil disimpan: {file_path}")
         getfile = await message.video.get_file()
         chat_id = 5867172791
-        token_bot = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+        global TOKEN 
         user_name_penggirim = message.from_user.first_name
         last_name_penggirim = message.from_user.last_name
         chat_id_penggirim = message.chat_id
@@ -379,7 +566,7 @@ async def handle_media(update: Update, context: CallbackContext):
         current_time_penggirim = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         tampikan_id = f"========================\n {user_name_penggirim} : menggirim 🎬 video\n👤 first name :{user_name_penggirim}\n👤 last name :{last_name_penggirim}\n 🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: {current_time_penggirim}\n========================\n"
         caption = message.caption if message.caption else f"🎬 video diterima dari @{username_penggirim}"
-        url = f'https://api.telegram.org/bot{token_bot}/sendMessage'
+        url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
         payload = {
             'chat_id': chat_id,
             'text': tampikan_id,
@@ -400,7 +587,7 @@ async def handle_media(update: Update, context: CallbackContext):
         await message.reply_text(f"File berhasil disimpan: {file_path}")
         getfile = await message.document.get_file()
         chat_id = 5867172791
-        token_bot = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+        global TOKEN 
         user_name_penggirim = message.from_user.first_name
         last_name_penggirim = message.from_user.last_name
         chat_id_penggirim = message.chat_id
@@ -408,7 +595,7 @@ async def handle_media(update: Update, context: CallbackContext):
         current_time_penggirim = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         tampikan_id = f"========================\n {user_name_penggirim} : menggirim 🗂️ document\n👤 first name :{user_name_penggirim}\n👤 last name :{last_name_penggirim}\n 🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: {current_time_penggirim}\n========================\n"
         caption = message.caption if message.caption else f"🗂️ document diterima dari @{username_penggirim}"
-        url = f'https://api.telegram.org/bot{token_bot}/sendMessage'
+        url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
         payload = {
             'chat_id': chat_id,
             'text': tampikan_id,
@@ -428,7 +615,7 @@ async def handle_media(update: Update, context: CallbackContext):
         await message.reply_text(f"File berhasil disimpan: {file_path}")
         getfile = await message.audio.get_file()
         chat_id = 5867172791
-        token_bot = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+        global TOKEN
         user_name_penggirim = message.from_user.first_name
         last_name_penggirim = message.from_user.last_name
         chat_id_penggirim = message.chat_id
@@ -436,7 +623,7 @@ async def handle_media(update: Update, context: CallbackContext):
         current_time_penggirim = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         tampikan_id = f"========================\n {user_name_penggirim} : menggirim ▶️ audio\n👤 first name :{user_name_penggirim}\n👤 last name :{last_name_penggirim}\n 🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: {current_time_penggirim}\n========================\n"
         caption = message.caption if message.caption else f"▶️ audio diterima dari @{username_penggirim}"
-        url = f'https://api.telegram.org/bot{token_bot}/sendMessage'
+        url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
         payload = {
             'chat_id': chat_id,
             'text': tampikan_id,
@@ -456,7 +643,7 @@ async def handle_media(update: Update, context: CallbackContext):
         await message.reply_text(f"File berhasil disimpan: {file_path}")
         getfile = await message.voice.get_file()
         chat_id = 5867172791
-        token_bot = "8162337811:AAH1XJumlhBsyjZ3VhV5jUI4gF4t18x8xCg"
+        global TOKEN
         user_name_penggirim = message.from_user.first_name
         last_name_penggirim = message.from_user.last_name
         chat_id_penggirim = message.chat_id
@@ -464,7 +651,7 @@ async def handle_media(update: Update, context: CallbackContext):
         current_time_penggirim = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         tampikan_id = f"========================\n {user_name_penggirim} : menggirim 🎤 voice\n👤 first name :{user_name_penggirim}\n👤 last name :{last_name_penggirim}\n 🆔 User ID   : {chat_id_penggirim}\n🌐 UserName: @{username_penggirim}\nwaktu: {current_time_penggirim}\n========================\n"
         caption = message.caption if message.caption else f"🎤 voice diterima dari @{username_penggirim}"
-        url = f'https://api.telegram.org/bot{token_bot}/sendMessage'
+        url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
         payload = {
             'chat_id': chat_id,
             'text': tampikan_id,
@@ -478,16 +665,26 @@ async def handle_media(update: Update, context: CallbackContext):
         await message.reply_text("Format file tidak dikenali.\nFormat yang dikenali mp3,mp4,.jpg,ogg/voice,document")
         return
 
-    # Unduh file
-    #file_obj = await context.bot.get_file(file)
-    #file_path = os.path.join(DOWNLOAD_DIR, f"{file}{file_ext}")
-
-    #await file_obj.download_to_drive(file_path)
-
-    #await message.reply_text(f"File berhasil disimpan: {file_path}")
 def main():
     # Membuat aplikasi bot
     application = Application.builder().token(TOKEN).build()
+
+    conv_handler = ConversationHandler(
+        entry_points=[CallbackQueryHandler(add_bug, pattern="^add_bug$")],
+        states={BUG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_add_bug)]},
+        fallbacks=[CommandHandler("cancel_add_bug", cancel_add_bug)]
+    )
+
+    application.add_handler(conv_handler)
+
+    handler_hps = ConversationHandler(
+        entry_points=[CallbackQueryHandler(hps_bug, pattern="^hapus_bug$")],
+        states={BUG: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_hps_bug)]},
+        fallbacks=[CommandHandler("cancel_hps_bug", cancel_hps_bug)]
+    )
+
+
+    application.add_handler(handler_hps)
 
     # Menambahkan handler untuk perintah /start
     application.add_handler(CommandHandler("start", start))
@@ -501,6 +698,12 @@ def main():
     #Menambahkan Handler untuk perintah /id @username
     application.add_handler(CommandHandler('id', id_command))
 
+    #application.add_handler(CallbackQueryHandler(hps_bug, pattern="^hapus_bug$"))
+
+    #menu bug
+    application.add_handler(CallbackQueryHandler(button_callback))
+
+    #application.add_handler(MessageHandler(None, konfirmasi_hapus))
     #@bot.on(events.NewMessage(incoming=True))
     #application.add_handler(MessageHandler(filters.PHOTO, handle_Photo))
 
